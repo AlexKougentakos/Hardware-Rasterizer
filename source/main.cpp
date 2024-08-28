@@ -24,11 +24,12 @@ int main(int argc, char* args[])
 	//Create window + surfaces
 	SDL_Init(SDL_INIT_VIDEO);
 
-	const uint32_t width = 640;
+	const uint32_t width = 800;
 	const uint32_t height = 480;
+	const std::string windowTitle{"DirectX - Alexandros Kougentakos - 2DAE07"};
 
 	SDL_Window* pWindow = SDL_CreateWindow(
-		"DirectX - ***Insert Name/Class***",
+		windowTitle.c_str(),
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		width, height, 0);
@@ -44,6 +45,8 @@ int main(int argc, char* args[])
 	pTimer->Start();
 	float printTimer = 0.f;
 	bool isLooping = true;
+	bool isUsingDX = true;
+	bool isShowingFPS = true;
 	while (isLooping)
 	{
 		//--------- Get input events ---------
@@ -57,7 +60,20 @@ int main(int argc, char* args[])
 				break;
 			case SDL_KEYUP:
 				//Test for a key
-				//if (e.key.keysym.scancode == SDL_SCANCODE_X)
+				pRenderer->HandleInput(e);
+				if (e.key.keysym.scancode == SDL_SCANCODE_F1)
+				{
+					isUsingDX = !isUsingDX;
+					pRenderer->SetRasterizerModel(isUsingDX);
+				}
+				if (e.key.keysym.scancode == SDL_SCANCODE_F11)
+				{
+					if (isShowingFPS)
+						std::cout << "\033[1;33mFPS FPS Display (On Window Title) is paused!\033[0m" << std::endl;
+					else std::cout << "\033[1;33mFPS FPS Display (On Window Title) is resumed!\033[0m" << std::endl;
+					isShowingFPS = !isShowingFPS;
+				}
+					
 				break;
 			default: ;
 			}
@@ -67,7 +83,10 @@ int main(int argc, char* args[])
 		pRenderer->Update(pTimer);
 
 		//--------- Render ---------
-		pRenderer->Render();
+		if (isUsingDX)
+			pRenderer->RenderDirectX();
+		else 
+			pRenderer->RenderSoftware();
 
 		//--------- Timer ---------
 		pTimer->Update();
@@ -75,7 +94,10 @@ int main(int argc, char* args[])
 		if (printTimer >= 1.f)
 		{
 			printTimer = 0.f;
-			std::cout << "dFPS: " << pTimer->GetdFPS() << std::endl;
+			if (isShowingFPS)
+				SDL_SetWindowTitle(pWindow, (std::stringstream{} << windowTitle.c_str() << " || dFPS: " << std::to_string(pTimer->GetFPS())).str().c_str());
+			else SDL_SetWindowTitle(pWindow, (std::stringstream{} << windowTitle.c_str() << " || dFPS: Paused!").str().c_str());
+			//std::cout << "dFPS: " << pTimer->GetdFPS() << std::endl;
 		}
 	}
 	pTimer->Stop();
@@ -86,4 +108,6 @@ int main(int argc, char* args[])
 
 	ShutDown(pWindow);
 	return 0;
+
+
 }

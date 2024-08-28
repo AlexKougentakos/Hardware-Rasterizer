@@ -1,6 +1,10 @@
 #pragma once
+#include <cassert>
 #include <fstream>
 #include "Math.h"
+#include "DataTypes.h"
+
+//#define DISABLE_OBJ
 
 namespace dae
 {
@@ -9,8 +13,16 @@ namespace dae
 		//Just parses vertices and indices
 #pragma warning(push)
 #pragma warning(disable : 4505) //Warning unreferenced local function
-		static bool ParseOBJ(const std::string& filename, std::vector<Vertex_In>& vertices, std::vector<uint32_t>& indices, bool flipAxisAndWinding = true)
+		static bool ParseOBJ(const std::string& filename, std::vector<Vertex_PosTex>& vertices, std::vector<uint32_t>& indices, bool flipAxisAndWinding = true)
 		{
+#ifdef DISABLE_OBJ
+
+			//TODO: Enable the code below after uncommenting all the vertex attributes of DataTypes::Vertex
+			// >> Comment/Remove '#define DISABLE_OBJ'
+			assert(false && "OBJ PARSER not enabled! Check the comments in Utils::ParseOBJ");
+
+#else
+
 			std::ifstream file(filename);
 			if (!file)
 				return false;
@@ -64,7 +76,7 @@ namespace dae
 					//add the material index as attibute to the attribute array
 					//
 					// Faces or triangles
-					Vertex_In vertex{};
+					Vertex_PosTex vertex{};
 					size_t iPosition, iTexCoord, iNormal;
 
 					uint32_t tempIndices[3];
@@ -97,11 +109,10 @@ namespace dae
 
 						vertices.push_back(vertex);
 						tempIndices[iFace] = uint32_t(vertices.size()) - 1;
-						//indices.push_back(uint32_t(vertices.size()) - 1);
 					}
 
 					indices.push_back(tempIndices[0]);
-					if (flipAxisAndWinding) 
+					if (flipAxisAndWinding)
 					{
 						indices.push_back(tempIndices[2]);
 						indices.push_back(tempIndices[1]);
@@ -142,12 +153,12 @@ namespace dae
 				vertices[index2].tangent += tangent;
 			}
 
-			//Create the Tangents (reject)
+			//Fix the tangents per vertex now because we accumulated
 			for (auto& v : vertices)
 			{
-				v.tangent = Vector3::Reject(v.tangent, v.normal).Normalized();
+				//v.tangent = Vector3::Reject(v.tangent, v.normal).Normalized();
 
-				if(flipAxisAndWinding)
+				if (flipAxisAndWinding)
 				{
 					v.position.z *= -1.f;
 					v.normal.z *= -1.f;
@@ -157,6 +168,36 @@ namespace dae
 			}
 
 			return true;
+#endif
+		}
+
+		inline bool IsInTriangle(const Vector2& point, const Vector2& v0, const Vector2& v1, const Vector2& v2)
+		{
+			Vector2 edgeA{ v1 - v0 };
+			if (Vector2::Cross(edgeA, point - v0) < 0)
+				return false;
+			Vector2 edgeB{ v2 - v1 };
+			if (Vector2::Cross(edgeB, point - v1) < 0)
+				return false;
+			Vector2 edgeC{ v0 - v2 };
+			if (Vector2::Cross(edgeC, point - v2) < 0)
+				return false;
+
+			return true;
+		}
+
+		inline void Clamp(float& var, float min, float max, bool edgesIsEquals = true) //if the last bool is true then that means that the range looks like
+		{																			  //[0,1] instead of (0,1)
+			if (edgesIsEquals) //[min, max]
+			{
+				if (var <= min) var = min;
+				if (var >= max) var = max;
+			}
+			else //(min, max)
+			{
+				if (var <= min) var = min + 0.000001f;
+				if (var >= max) var = max - 0.000001f;
+			}
 		}
 #pragma warning(pop)
 	}

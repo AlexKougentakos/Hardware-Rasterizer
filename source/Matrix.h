@@ -5,6 +5,13 @@
 namespace dae {
 	struct Matrix
 	{
+		enum MatrixType
+		{
+			worldMatrix,
+			inverseViewMatrix,
+			worldViewProjectionMatrix
+		};
+
 		Matrix() = default;
 		Matrix(
 			const Vector3& xAxis,
